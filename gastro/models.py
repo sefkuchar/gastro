@@ -5,7 +5,7 @@ from django.contrib.postgres.fields import ArrayField
     
 class Restaurant(models.Model):
     RestaurantTitle = models.CharField(max_length = 50)
-    RestaurantID  = models.ForeignKey("Person", on_delete=models.CASCADE,)
+    OwnerID  = models.ForeignKey("Person", on_delete=models.CASCADE,)
     EmployeeeIDS = ArrayField(models.IntegerField())
     TableGridID =  models.ForeignKey("TableGrid", on_delete=models.CASCADE,)
     Status = models.CharField(max_length=255)
