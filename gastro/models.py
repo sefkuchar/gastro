@@ -1,76 +1,196 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-
+from django.core.validators import MinValueValidator
+from django.conf import settings
+from uuid import uuid4
+from django.contrib import admin
 # Create your models here.
-    
+
 class Restaurant(models.Model):
-    RestaurantTitle = models.CharField(max_length = 50)
-    OwnerID  = models.ForeignKey("Person", on_delete=models.CASCADE,)
-    EmployeeeIDS = ArrayField(models.IntegerField())
-    TableGridID =  models.ForeignKey("TableGrid", on_delete=models.CASCADE,)
-    Status = models.CharField(max_length=255)
-    Location = models.CharField(max_length=255)
-    def __str__(self):
-        return self.RestaurantTitle
+    RESTAURANT_OPEN = 'O'
+    RESTAURARNT_CLOSED = 'C'
+
+    RESTAURANT_STATUSES=[
+        (RESTAURANT_OPEN,'Open'),
+        (RESTAURARNT_CLOSED,"Closed")
+    ]
+    table_grid_width = models.IntegerField()
+    table_grid_height = models.IntegerField()
+    restaurant_title = models.CharField(max_length = 255)            
+    restaurant_status = models.CharField(max_length=1,choices=RESTAURANT_STATUSES,default=RESTAURARNT_CLOSED)    
+    
+    #adress = models.OneToOneField(Address,on_delete=models.CASCADE, primary_key=True)
+    #opening_hours = models.CharField(max_length = 255)
+
+    def __str__(self)->str:
+        return self.restaurant_title
+
+class Address(models.Model):
+    street = models.CharField(max_length=255)
+    city =  models.CharField(max_length=255)    
+   # restaurant = models.OneToOneField(Restaurant,on_delete=models.CASCADE, primary_key=True)
     
 
-class TableGrid(models.Model):
-    Rows = models.IntegerField(null = True)
-    Columns = models.IntegerField(null = True)
-    Tables = ArrayField(models.IntegerField())
-    def __str__(self):
-        return self.Rows, self.Columns
 
 
+class RestaurantTable(models.Model):
+    restaurant = models.ForeignKey(Restaurant,on_delete=models.CASCADE,related_name="tables")
 
-class Person(models.Model):
-    
-    name = models.CharField(max_length=50)
-    email = models.CharField(max_length=50)
-    password = models.CharField(max_length=50)
-
-    role_choices  = (
-        ('A', 'admin'),
-        ('O','Owner'),
-        ('W','Waiter'),
-        ('C', 'Customer')
-    )
-
-    role = models.CharField(max_length=9,
-                  choices=role_choices,
-                  default="C")
-
-
-
-    def __str__(self):
-        return self.name
-    
-class Reservation(models.Model):
-    
-    Person = models.ForeignKey("Person", on_delete=models.CASCADE,)
-    TableId = models.IntegerField(null = True)
-    DateTimeFrom = models.DateTimeField()
-    DateTimeTo = models.DateTimeField()
-    PersonId = models.IntegerField(null = True)
-
-    def __str__(self):
-        return self.TableId
-    
-class Table(models.Model):
-    status = models.CharField(max_length=255, null = True)
     seats = models.IntegerField(null = True)
     row = models.IntegerField(null = True)
     column = models.IntegerField(null = True)
 
-    def __str__(self):
-        return self.row, self.column
 
+    TABLE_EMPTY = 'E'    
+    TABLE_FULL = 'F'    
+
+    TABLE_STATUSES = [
+        (TABLE_EMPTY,"Empty"),
+        (TABLE_FULL,"Full"),        
+    ]
+
+    table_status = models.CharField(max_length=1,choices=TABLE_STATUSES, default=TABLE_EMPTY)
+
+
+
+class Customer(models.Model):
+    phone = models.CharField(max_length=255)            
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+
+    @admin.display(ordering='user__first_name')
+    def first_name(self):
+        return self.user.first_name
+    @admin.display(ordering='user__last_name')   
+    def last_name(self):
+        return self.user.last_name
+
+    def __str__(self) -> str:
+      return f'{self.user.first_name} {self.user.last_name }'
+
+    class Meta:
+        ordering = ['user__first_name','user__last_name']
+
+
+
+class Owner(models.Model):
+    restaurant = models.OneToOneField(Restaurant,on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    @admin.display(ordering='user__first_name')
+    def first_name(self):
+        return self.user.first_name
+    @admin.display(ordering='user__last_name')   
+    def last_name(self):
+        return self.user.last_name
+
+    def __str__(self) -> str:
+      return f'{self.user.first_name} {self.user.last_name }'
+
+    class Meta:
+        ordering = ['user__first_name','user__last_name']
+
+
+class Waiter(models.Model):
+    restaurant = models.ForeignKey(Restaurant,on_delete=models.CASCADE,related_name='waiters')        
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    @admin.display(ordering='user__first_name')
+    def first_name(self):
+        return self.user.first_name
+    @admin.display(ordering='user__last_name')   
+    def last_name(self):
+        return self.user.last_name
+
+    def __str__(self) -> str:
+      return f'{self.user.first_name} {self.user.last_name }'
+
+    class Meta:
+        ordering = ['user__first_name','user__last_name']
+
+class TableReservation(models.Model):    
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    table = models.ForeignKey(RestaurantTable,on_delete=models.CASCADE,related_name='reservations')
+    date_time_from = models.DateTimeField()
+    date_time_to = models.DateTimeField()
+        
+######
+class Promotion(models.Model):
+    description = models.CharField(max_length=255)
+    discount = models.FloatField()
+#####
+class Collection(models.Model):
+    title = models.CharField(max_length=255)
+    restaurant = models.ForeignKey(Restaurant,on_delete=models.CASCADE,related_name='collections')
+    featured_product = models.ForeignKey('Product',on_delete=models.SET_NULL,null=True,blank=True,related_name="+")
+    def __str__(self) -> str :
+        return self.title
+    class Meta:
+        ordering = ['title']    
+
+class Product(models.Model):
+    title = models.CharField(max_length=255)
+    slug = models.SlugField()    
+    description = models.TextField(null=True,blank=True)
+    unit_price = models.DecimalField(max_digits=6,decimal_places=2, validators=[MinValueValidator(1)])    
+    collection = models.ForeignKey(Collection,on_delete=models.PROTECT, related_name='products')
+    restaurant = models.ForeignKey(Restaurant,on_delete=models.CASCADE,related_name='products')
+    promotions = models.ManyToManyField(Promotion,blank=True)
+    last_update = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return self.title
+    class Meta:
+        ordering = ['title']   
 
 class Order(models.Model):
-    Restaurant = models.ForeignKey("Restaurant", on_delete=models.CASCADE,)
-    Table = models.ForeignKey("Table", on_delete=models.CASCADE,)
-    Customer = models.ForeignKey("Person", on_delete=models.CASCADE,)
-    Order = models.TextField()
+    ORDER_PENDING = 'P'
+    ORDER_COMPLETE = 'C'
+    ORDER_FAILED = 'F'    
 
-    def __str__(self):
-        return self.Order   
+    ORDER_STATUSES = [
+        (ORDER_PENDING,"Pending"),
+        (ORDER_COMPLETE,"Complete"),
+        (ORDER_FAILED,"Failed")
+    ]
+
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE,)
+    table = models.ForeignKey(RestaurantTable, on_delete=models.CASCADE,)
+    order = models.TextField()
+
+    placed_at = models.DateTimeField(auto_now_add=True)
+    payment_status = models.CharField(max_length=1,choices=ORDER_STATUSES,default=ORDER_PENDING)
+    customer = models.ForeignKey(Customer,on_delete=models.PROTECT)    
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=  models.PROTECT)
+    product = models.ForeignKey(Product,on_delete = models.PROTECT,related_name='orderitems')
+    quantity = models.PositiveSmallIntegerField()
+    unit_price = models.DecimalField(max_digits=6,decimal_places=2)
+
+    class Meta:
+        unique_together = [['order','product']]
+
+class Cart(models.Model):
+    id= models.UUIDField(primary_key=True, default=uuid4)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart,on_delete= models.CASCADE, related_name='items')
+    product  = models.ForeignKey(Product, on_delete=models.CASCADE) 
+    quantity = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)]
+    )
+
+    class Meta:
+        unique_together = [['cart','product']]
+
+
+#####
+class Review(models.Model):
+    product  = models.ForeignKey(Product,on_delete=models.CASCADE,related_name='reviews')
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    date = models.DateField(auto_now_add=True)
+

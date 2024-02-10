@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,8 +38,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
+    'debug_toolbar',
+    'rest_framework',
+    'djoser',
+    'corsheaders',
     'gastro',
-    'rest_framework'
+    'core'  
 ]
 
 MIDDLEWARE = [
@@ -49,8 +55,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware'
 ]
 
+
+CORS_ALLOW_ALL_ORIGINS =  True
 ROOT_URLCONF = 'gastroApi.urls'
 
 TEMPLATES = [
@@ -77,8 +86,11 @@ WSGI_APPLICATION = 'gastroApi.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME':'gastro',
+        'HOST':'localhost',
+        'USER':'root',
+        'PASSWORD':"Ad@mko2706"
     }
 }
 
@@ -123,3 +135,25 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = 'core.User'
+
+REST_FRAMEWORK = {
+    'COERCE_DECIMAL_TO_STRING':False,    
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+       
+    ),    
+}
+
+DJOSER={
+    'SERIALIZERS':{
+        'user_create':"core.serializers.UserCreateSerializer",
+        'current_user':"core.serializers.UserSerializer"
+    }
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME':timedelta(days=1),
+    'AUTH_HEADER_TYPES':('JWT')
+}

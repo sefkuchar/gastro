@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h2>Registration Form</h2>
+    <h2 id="key"></h2>
+
+    <form id="registrationForm">
+      <label for="username">Username:</label><br />
+      <input type="text" id="username" name="username" /><br />
+      <label for="password">Password:</label><br />
+      <input type="password" id="password" name="password" /><br />
+      <label for="email">Email:</label><br />
+      <input type="email" id="email" name="email" /><br />
+      <label for="fname">First Name:</label><br />
+      <input type="text" id="fname" name="fname" /><br />
+      <label for="lname">Last Name:</label><br />
+      <input type="text" id="lname" name="lname" /><br />
+      <label for="phone">Phone Number:</label><br />
+      <input type="tel" id="phone" name="phone" /><br />
+      <input type="submit" value="Submit" />
+    </form>
+
+    <script>
+      document
+        .getElementById("registrationForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+
+          let username = document.getElementById("username").value;
+          let password = document.getElementById("password").value;
+          let email = document.getElementById("email").value;
+          let fname = document.getElementById("fname").value;
+          let lname = document.getElementById("lname").value;
+          let phone = document.getElementById("phone").value;
+
+          let user = {
+            username: username,
+            password: password,
+            email: email,
+            first_name: fname,
+            last_name: lname,
+          };
+
+          fetch("http://127.0.0.1:8000/auth/users/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(user),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              let userId = data.id;
+
+              let customer = {
+                user_id: userId,
+                phone: phone,
+              };
+
+              fetch("http://127.0.0.1:8000/api/customers/", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(customer),
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  let login = {
+                    username: username,
+                    password: password,
+                  };
+
+                  fetch("http://127.0.0.1:8000/auth/jwt/create", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(login),
+                  })
+                    .then((response) => response.json())
+                    .then((data) => {
+                      document.getElementById("key").innerText = data.access;
+                    });
+                });
+            });
+        });
+    </script>
+  </body>
+</html>
