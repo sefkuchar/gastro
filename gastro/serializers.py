@@ -1,7 +1,15 @@
 from rest_framework import serializers
-from .models import Cart, CartItem,Product,Customer,Waiter,Collection,OrderItem,Order,RestaurantTable, TableReservation
+from .models import Cart, CartItem,Product,Customer,Waiter,Collection,OrderItem,Order,RestaurantTable, TableReservation,Owner,Restaurant
 from decimal import Decimal
 from core.models import User
+from django.db import transaction
+
+class RestaurantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Restaurant
+        fields = ['id', 'table_grid_width', 'table_grid_height', 'restaurant_title', 'restaurant_status']
+
+
 class SimpleProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -11,20 +19,22 @@ class SimpleProductSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'title', 'description', 'slug',
+        fields = ['id', 'title', 'restaurant','description', 'slug',
                   'unit_price', 'price_with_tax', 'collection']
+        read_only_fields = ['restaurant']          
 
     price_with_tax = serializers.SerializerMethodField(
         method_name='calculate_tax')
 
     def calculate_tax(self, product: Product):
         return product.unit_price * Decimal(1.1)
+    
 
 
 class CollectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
-        fields = ['id', 'title', 'products_count']
+        fields = ['id', 'restaurant','title', 'products_count']
 
     products_count = serializers.IntegerField(read_only=True)
 
@@ -107,7 +117,36 @@ class CustomerSerializer(serializers.ModelSerializer):
 class WaiterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Waiter
-        fields = ['id','user_id','restaurant_id']
+        fields = ['id']
+
+    def create(self, validated_data):
+        
+        email = self.context['request'].data.get('email')
+        if not email:
+            raise serializers.ValidationError("Email is required.")
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with the provided email does not exist.")
+        
+        
+        if Waiter.objects.filter(user=user).exists():
+            raise serializers.ValidationError("Waiter with the provided email already exists.")
+        
+        owner = Owner.objects.get(user=self.context['request'].user)
+        restaurant = owner.restaurant
+
+        waiter = Waiter.objects.create(user=user, restaurant=restaurant)
+        return waiter
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self.context['view'].action == 'list':
+            data['first_name'] = instance.user.first_name
+            data['last_name'] = instance.user.last_name
+        return data
+ 
+
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -123,7 +162,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'placed_at', 'payment_status', 'items']
+        fields = ['id', 'restaurant', 'customer','table', 'placed_at', 'payment_status', 'items']
 
 
 class UpdateOrderSerializer(serializers.ModelSerializer):
@@ -133,7 +172,8 @@ class UpdateOrderSerializer(serializers.ModelSerializer):
 
 
 class CreateOrderSerializer(serializers.Serializer):
-    cart_id = serializers.UUIDField()
+    cart_id = serializers.UUIDField()    
+
 
     def validate_cart_id(self, cart_id):
         if not Cart.objects.filter(pk=cart_id).exists():
@@ -146,10 +186,11 @@ class CreateOrderSerializer(serializers.Serializer):
     def save(self, **kwargs):
         with transaction.atomic():
             cart_id = self.validated_data['cart_id']
-
+            restaurant = self.context.get('restaurant')
+            table = self.context.get('table')
             customer = Customer.objects.get(
                 user_id=self.context['user_id'])
-            order = Order.objects.create(customer=customer)
+            order = Order.objects.create(customer=customer,restaurant=restaurant,table=table)
 
             cart_items = CartItem.objects \
                 .select_related('product') \
@@ -165,8 +206,7 @@ class CreateOrderSerializer(serializers.Serializer):
             OrderItem.objects.bulk_create(order_items)
 
             Cart.objects.filter(pk=cart_id).delete()
-
-            order_created.send_robust(self.__class__, order=order)
+           
 
             return order
 
@@ -175,24 +215,23 @@ class RestaurantTableSerializer(serializers.ModelSerializer):
     class Meta:
         model = RestaurantTable
         fields = ['id', 'restaurant', 'seats', 'row', 'column', 'table_status']
+        read_only_fields = ['restaurant']
 
     def create(self, validated_data):
-        restaurant_id = validated_data.get('restaurant').id
-        row = validated_data.get('row')
-        column = validated_data.get('column')
+        restaurant = validated_data.get('restaurant')
         
-        existing_table = RestaurantTable.objects.filter(restaurant_id=restaurant_id, row=row, column=column).first()
-        if existing_table:
-            raise serializers.ValidationError("A table with the same restaurant id, row, and column already exists.")
-
+        if restaurant:
+            existing_table = RestaurantTable.objects.filter(restaurant=restaurant, row=validated_data['row'], column=validated_data['column']).first()
+            if existing_table:
+                raise serializers.ValidationError("A table with the same restaurant, row, and column already exists.")
+        
         return super().create(validated_data)
-
 
 class TableReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = TableReservation
         fields = ['id', 'customer', 'table', 'date_time_from', 'date_time_to']
-
+        read_only_fields=['customer']
     def create(self, validated_data):
         
         table_id = validated_data.get('table').id

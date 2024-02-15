@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator
 from django.conf import settings
 from uuid import uuid4
 from django.contrib import admin
-# Create your models here.
+
 
 class Restaurant(models.Model):
     RESTAURANT_OPEN = 'O'
@@ -19,17 +19,11 @@ class Restaurant(models.Model):
     restaurant_title = models.CharField(max_length = 255)            
     restaurant_status = models.CharField(max_length=1,choices=RESTAURANT_STATUSES,default=RESTAURARNT_CLOSED)    
     
-    #adress = models.OneToOneField(Address,on_delete=models.CASCADE, primary_key=True)
-    #opening_hours = models.CharField(max_length = 255)
 
     def __str__(self)->str:
         return self.restaurant_title
 
-class Address(models.Model):
-    street = models.CharField(max_length=255)
-    city =  models.CharField(max_length=255)    
-   # restaurant = models.OneToOneField(Restaurant,on_delete=models.CASCADE, primary_key=True)
-    
+
 
 
 
@@ -114,11 +108,7 @@ class TableReservation(models.Model):
     date_time_from = models.DateTimeField()
     date_time_to = models.DateTimeField()
         
-######
-class Promotion(models.Model):
-    description = models.CharField(max_length=255)
-    discount = models.FloatField()
-#####
+
 class Collection(models.Model):
     title = models.CharField(max_length=255)
     restaurant = models.ForeignKey(Restaurant,on_delete=models.CASCADE,related_name='collections')
@@ -135,7 +125,7 @@ class Product(models.Model):
     unit_price = models.DecimalField(max_digits=6,decimal_places=2, validators=[MinValueValidator(1)])    
     collection = models.ForeignKey(Collection,on_delete=models.PROTECT, related_name='products')
     restaurant = models.ForeignKey(Restaurant,on_delete=models.CASCADE,related_name='products')
-    promotions = models.ManyToManyField(Promotion,blank=True)
+    
     last_update = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
@@ -164,7 +154,7 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=  models.PROTECT)
+    order = models.ForeignKey(Order, on_delete=  models.PROTECT,related_name='items')
     product = models.ForeignKey(Product,on_delete = models.PROTECT,related_name='orderitems')
     quantity = models.PositiveSmallIntegerField()
     unit_price = models.DecimalField(max_digits=6,decimal_places=2)

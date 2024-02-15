@@ -14,6 +14,7 @@ router.register('tables',views.RestaurantTableView, basename='tables')
 router.register('reservations',views.TableReservationView,basename='reservations')
 router.register('carts',views.CartViewSet)
 router.register('orders', views.OrderViewSet, basename='orders')
+router.register('restaurants',views.RestaurantViewSet,basename='restaurants')
 
 
 carts_router = routers.NestedDefaultRouter(router,'carts',lookup='cart')
