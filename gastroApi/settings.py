@@ -90,7 +90,7 @@ DATABASES = {
         'NAME':'gastro',
         'HOST':'localhost',
         'USER':'root',
-        'PASSWORD':"Ad@mko2706"
+        'PASSWORD':""
     }
 }
 
