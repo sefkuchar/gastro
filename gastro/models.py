@@ -5,7 +5,9 @@ from django.conf import settings
 from uuid import uuid4
 from django.contrib import admin
 
-
+################################################################################## |
+#Túto časť robil Matej Turňa                                                       |  
+################################################################################## V
 class Restaurant(models.Model):
     RESTAURANT_OPEN = 'O'
     RESTAURARNT_CLOSED = 'C'
@@ -22,9 +24,6 @@ class Restaurant(models.Model):
 
     def __str__(self)->str:
         return self.restaurant_title
-
-
-
 
 
 class RestaurantTable(models.Model):
@@ -44,7 +43,6 @@ class RestaurantTable(models.Model):
     ]
 
     table_status = models.CharField(max_length=1,choices=TABLE_STATUSES, default=TABLE_EMPTY)
-
 
 
 class Customer(models.Model):
@@ -107,7 +105,15 @@ class TableReservation(models.Model):
     table = models.ForeignKey(RestaurantTable,on_delete=models.CASCADE,related_name='reservations')
     date_time_from = models.DateTimeField()
     date_time_to = models.DateTimeField()
-        
+######################################################################
+######################################################################        
+######################################################################
+
+
+
+################################################################################## |
+#Túto časť robil Adam Turčan                                                       |  
+################################################################################## V
 
 class Collection(models.Model):
     title = models.CharField(max_length=255)
@@ -177,10 +183,7 @@ class CartItem(models.Model):
         unique_together = [['cart','product']]
 
 
-#####
-class Review(models.Model):
-    product  = models.ForeignKey(Product,on_delete=models.CASCADE,related_name='reviews')
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    date = models.DateField(auto_now_add=True)
+################################################################################
+################################################################################
+################################################################################
 

@@ -3,18 +3,14 @@ from .models import Cart, CartItem,Product,Customer,Waiter,Collection,OrderItem,
 from decimal import Decimal
 from core.models import User
 from django.db import transaction
-
-class RestaurantSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Restaurant
-        fields = ['id', 'table_grid_width', 'table_grid_height', 'restaurant_title', 'restaurant_status']
-
+################################################################################## |
+#Túto časť robil Adam Turčan                                                       |  
+################################################################################## V
 
 class SimpleProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id','title','unit_price']
-
     
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,15 +25,12 @@ class ProductSerializer(serializers.ModelSerializer):
     def calculate_tax(self, product: Product):
         return product.unit_price * Decimal(1.1)
     
-
-
 class CollectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
         fields = ['id', 'restaurant','title', 'products_count']
 
     products_count = serializers.IntegerField(read_only=True)
-
 
 class CartItemSerializer(serializers.ModelSerializer):  
     product = SimpleProductSerializer()
@@ -57,7 +50,6 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_total_price(self,cart):
         return sum([item.quantity * item.product.unit_price for item in cart.items.all()])
-
 
     class Meta:
         model = Cart
@@ -84,16 +76,84 @@ class AddCartItemSerializer(serializers.ModelSerializer):
             self.instance =    CartItem.objects.create(cart_id = cart_id,**self.validated_data)    
         return self.instance
 
-
     class Meta:
         model = CartItem
         fields = ['id','product_id','quantity']
-
 
 class UpdateCartItemSerializer(serializers.ModelSerializer):
     class Meta:
         model =  CartItem
         fields = ['quantity']
+
+ 
+class OrderItemSerializer(serializers.ModelSerializer):
+    product = SimpleProductSerializer()
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'unit_price', 'quantity']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'restaurant', 'customer','table', 'placed_at', 'payment_status', 'items']
+
+class UpdateOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['payment_status']
+
+class CreateOrderSerializer(serializers.Serializer):
+    cart_id = serializers.UUIDField()    
+
+    def validate_cart_id(self, cart_id):
+        if not Cart.objects.filter(pk=cart_id).exists():
+            raise serializers.ValidationError(
+                'No cart with the given ID was found.')
+        if CartItem.objects.filter(cart_id=cart_id).count() == 0:
+            raise serializers.ValidationError('The cart is empty.')
+        return cart_id
+
+    def save(self, **kwargs):
+        with transaction.atomic():
+            cart_id = self.validated_data['cart_id']
+            restaurant = self.context.get('restaurant')
+            table = self.context.get('table')
+            customer = Customer.objects.get(
+                user_id=self.context['user_id'])
+            order = Order.objects.create(customer=customer,restaurant=restaurant,table=table)
+
+            cart_items = CartItem.objects \
+                .select_related('product') \
+                .filter(cart_id=cart_id)
+            order_items = [
+                OrderItem(
+                    order=order,
+                    product=item.product,
+                    unit_price=item.product.unit_price,
+                    quantity=item.quantity
+                ) for item in cart_items
+            ]
+            OrderItem.objects.bulk_create(order_items)
+
+            Cart.objects.filter(pk=cart_id).delete()
+           
+            return order
+#################################################################################
+#################################################################################
+#################################################################################
+
+
+################################################################################## |
+#Túto časť robil Matej Turňa                                                       |  
+################################################################################## V
+
+class RestaurantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Restaurant
+        fields = ['id', 'table_grid_width', 'table_grid_height', 'restaurant_title', 'restaurant_status']
 
 class CustomerSerializer(serializers.ModelSerializer):  
     user_id = serializers.IntegerField()
@@ -129,8 +189,7 @@ class WaiterSerializer(serializers.ModelSerializer):
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             raise serializers.ValidationError("User with the provided email does not exist.")
-        
-        
+                
         if Waiter.objects.filter(user=user).exists():
             raise serializers.ValidationError("Waiter with the provided email already exists.")
         
@@ -145,71 +204,6 @@ class WaiterSerializer(serializers.ModelSerializer):
             data['first_name'] = instance.user.first_name
             data['last_name'] = instance.user.last_name
         return data
- 
-
-
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    product = SimpleProductSerializer()
-
-    class Meta:
-        model = OrderItem
-        fields = ['id', 'product', 'unit_price', 'quantity']
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True)
-
-    class Meta:
-        model = Order
-        fields = ['id', 'restaurant', 'customer','table', 'placed_at', 'payment_status', 'items']
-
-
-class UpdateOrderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = ['payment_status']
-
-
-class CreateOrderSerializer(serializers.Serializer):
-    cart_id = serializers.UUIDField()    
-
-
-    def validate_cart_id(self, cart_id):
-        if not Cart.objects.filter(pk=cart_id).exists():
-            raise serializers.ValidationError(
-                'No cart with the given ID was found.')
-        if CartItem.objects.filter(cart_id=cart_id).count() == 0:
-            raise serializers.ValidationError('The cart is empty.')
-        return cart_id
-
-    def save(self, **kwargs):
-        with transaction.atomic():
-            cart_id = self.validated_data['cart_id']
-            restaurant = self.context.get('restaurant')
-            table = self.context.get('table')
-            customer = Customer.objects.get(
-                user_id=self.context['user_id'])
-            order = Order.objects.create(customer=customer,restaurant=restaurant,table=table)
-
-            cart_items = CartItem.objects \
-                .select_related('product') \
-                .filter(cart_id=cart_id)
-            order_items = [
-                OrderItem(
-                    order=order,
-                    product=item.product,
-                    unit_price=item.product.unit_price,
-                    quantity=item.quantity
-                ) for item in cart_items
-            ]
-            OrderItem.objects.bulk_create(order_items)
-
-            Cart.objects.filter(pk=cart_id).delete()
-           
-
-            return order
-
 
 class RestaurantTableSerializer(serializers.ModelSerializer):
     class Meta:
@@ -243,3 +237,8 @@ class TableReservationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A reservation with the same table and time already exists.")
 
         return super().create(validated_data)        
+
+
+#################################################################################
+#################################################################################
+#################################################################################

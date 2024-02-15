@@ -3,6 +3,13 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import User
 # Register your models here.
 
+
+################################################################################## |
+#Túto časť robil Matej Turňa                                                       |  
+################################################################################## V
+
+
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     add_fieldsets = (

@@ -6,6 +6,10 @@ from django.utils.html import urlencode
 from django.utils.html import format_html
 # Register your models here.
 
+################################################################################## |
+#Túto časť robil Matej Turňa                                                       |  
+################################################################################## V
+
 @admin.register(models.Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ['first_name', 'last_name','orders']    
@@ -62,7 +66,26 @@ class RestaurantAdmin(admin.ModelAdmin):
     ordering = ['restaurant_title','restaurant_status']
     search_fields =['restaurant_title','restaurant_status']
 
+@admin.register(models.RestaurantTable)
+class TableAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['restaurant']
+    search_fields = ['id']
+    list_select_related = ['restaurant']
+    list_display = ['id','restaurant','seats','table_status']
 
+@admin.register(models.TableReservation)
+class ReservationAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['customer','table']
+    list_display = ['customer','date_time_from','table']
+    search_fields = ['table__id']
+    
+##################################################################################
+##################################################################################
+##################################################################################
+
+################################################################################## |
+#Túto časť robil Adam Turčan                                                       |  
+################################################################################## V
 @admin.register(models.Collection)
 class CollectionAdmin(admin.ModelAdmin):
     search_fields=['title']
@@ -115,17 +138,6 @@ class OrderAdmin(admin.ModelAdmin):
     list_select_related =['restaurant']
     inlines  = [OrderItemInline]
     list_display = ['id', 'placed_at', 'customer']  
-
-@admin.register(models.RestaurantTable)
-class TableAdmin(admin.ModelAdmin):
-    autocomplete_fields = ['restaurant']
-    search_fields = ['id']
-    list_select_related = ['restaurant']
-    list_display = ['id','restaurant','seats','table_status']
-
-@admin.register(models.TableReservation)
-class ReservationAdmin(admin.ModelAdmin):
-    autocomplete_fields = ['customer','table']
-    list_display = ['customer','date_time_from','table']
-    search_fields = ['table__id']
-    
+##################################################################################
+##################################################################################
+##################################################################################

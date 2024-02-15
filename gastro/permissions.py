@@ -1,6 +1,8 @@
 from rest_framework import permissions
 from .models import Customer,Owner,Waiter
-
+################################################################################## |
+#Túto časť robil Matej Turňa                                                       |  
+################################################################################## V
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
