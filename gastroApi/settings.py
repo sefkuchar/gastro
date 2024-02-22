@@ -86,11 +86,8 @@ WSGI_APPLICATION = 'gastroApi.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME':'gastro',
-        'HOST':'localhost',
-        'USER':'root',
-        'PASSWORD':"Ad@mko2706"
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'mydatabase',
     }
 }
 

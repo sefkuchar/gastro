@@ -19,7 +19,7 @@ class CustomerAdmin(admin.ModelAdmin):
     search_fields =['user__first_name__istartswith','user__last_name__istartswith']
 
 
-    @admin.display(ordering='orders')
+    @admin.display(ordering='orders') ######
     def orders(self,customer):
         url = (
             (reverse('admin:gastro_order_changelist')
@@ -33,6 +33,7 @@ class CustomerAdmin(admin.ModelAdmin):
         return super().get_queryset(request).annotate(
             orders = Count('order')
         )
+    
 @admin.register(models.Owner)
 class OwnerAdmin(admin.ModelAdmin):
     list_display = ['first_name', 'last_name','restaurant_title']    
@@ -51,7 +52,7 @@ class OwnerAdmin(admin.ModelAdmin):
 class WaiterAdmin(admin.ModelAdmin):
     list_display = ['first_name', 'last_name','restaurant_title']    
     list_per_page = 10
-    list_select_related = ['user']
+    list_select_related = ['user','restaurant']
     ordering = ['user__first_name','user__last_name']
     search_fields =['first_name__istartswith','last_name__istartswith']
 
@@ -135,8 +136,9 @@ class OrderItemInline(admin.StackedInline):
 @admin.register(models.Order)
 class OrderAdmin(admin.ModelAdmin):
     autocomplete_fields = ['customer','restaurant'  ]
-    list_select_related =['restaurant']
+    list_select_related =['restaurant','customer']
     inlines  = [OrderItemInline]
+    list_filter = ['customer']
     list_display = ['id', 'placed_at', 'customer']  
 ##################################################################################
 ##################################################################################

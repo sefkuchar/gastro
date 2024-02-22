@@ -198,7 +198,7 @@ class WaiterSerializer(serializers.ModelSerializer):
 
         waiter = Waiter.objects.create(user=user, restaurant=restaurant)
         return waiter
-    def to_representation(self, instance):
+    def to_representation(self, instance):######
         data = super().to_representation(instance)
         if self.context['view'].action == 'list':
             data['first_name'] = instance.user.first_name

@@ -9,7 +9,7 @@ from rest_framework.decorators import action, permission_classes
 
 from .filters import ProductFilter
 from .pagination import DefaultPagination
-from .permissions import FullDjangoModelPermissions, IsAdminOrReadOnly,IsUserCustomer,IsUserOwner,IsUserWaiter
+from .permissions import IsAdminOrReadOnly,IsUserCustomer,IsUserOwner,IsUserWaiter
 from .models import  Cart, CartItem,Customer,Product,Collection,Waiter,RestaurantTable,TableReservation,Owner,Restaurant,Order,OrderItem
 from .serializers import CartSerializer,CartItemSerializer,AddCartItemSerializer, UpdateCartItemSerializer,CustomerSerializer,ProductSerializer , \
 CollectionSerializer,CreateOrderSerializer,WaiterSerializer,RestaurantTableSerializer,TableReservationSerializer,RestaurantSerializer,OrderSerializer,UpdateOrderSerializer
@@ -231,10 +231,7 @@ class CollectionViewSet(ModelViewSet):
         except Product.DoesNotExist:
             return Response({"error": "Collection does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-class CartViewSet(CreateModelMixin,
-                  RetrieveModelMixin,
-                  GenericViewSet,
-                  DestroyModelMixin):
+class CartViewSet(CreateModelMixin,RetrieveModelMixin, GenericViewSet, DestroyModelMixin):
     queryset = Cart.objects.prefetch_related('items__product').all()
     serializer_class = CartSerializer
     permission_classes = [IsUserCustomer]
@@ -277,9 +274,7 @@ class OrderViewSet(ModelViewSet):
         except (Restaurant.DoesNotExist, RestaurantTable.DoesNotExist):
             return Response({"error": "Restaurant or Table with the provided ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
         
-        serializer = CreateOrderSerializer(
-            data=request.data,
-            context={'user_id': request.user.id, 'restaurant': restaurant, 'table': table})
+        serializer = CreateOrderSerializer(data=request.data, context={'user_id': request.user.id, 'restaurant': restaurant, 'table': table})
         serializer.is_valid(raise_exception=True)
 
         order = serializer.save()
@@ -354,7 +349,7 @@ class OrderViewSet(ModelViewSet):
 class CustomerViewSet(ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer    
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminUser]###
   
     @action(detail=False, methods=['GET', 'PUT'], permission_classes=[IsAuthenticated])
     def me(self, request):
